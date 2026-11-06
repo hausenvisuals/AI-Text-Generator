@@ -60,6 +60,8 @@
         }
 
         var candidates = [
+            "/Users/alfonrenaldo/Documents/antigravity/AE text automation plugins/AI Caption Generator/core",
+            userHome + "/Documents/antigravity/AE text automation plugins/AI Caption Generator/core",
             "/Users/alfonrenaldo/Documents/antigravity/AE text automation plugins/AI_Text_Generator/core",
             userHome + "/Documents/antigravity/AE text automation plugins/AI_Text_Generator/core",
             "/Users/alfonrenaldo/Documents/antigravity/AE text automation plugins/core",
