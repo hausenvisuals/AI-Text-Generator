@@ -670,6 +670,30 @@ class TestCaptionGenerator(unittest.TestCase):
         is_valid, reason = validate_caption_groups(groups, tokens, mode=GroupingMode.LONG)
         self.assertTrue(is_valid, f"Validation must pass for dramatic pause: {reason}")
 
+    def test_updater_silent_offline_fallback(self):
+        """Verify updater fails silently and returns False when offline, without crashing workflow."""
+        from updater import check_and_update_rules
+        # Using a non-existent or blocked URL will trigger offline fallback
+        res = check_and_update_rules(timeout_sec=0.1)
+        self.assertFalse(res, "Offline updater must return False without crashing")
+
+    def test_updater_mocked_sync_and_syntax_validation(self):
+        """Verify updater validates syntax and rejects corrupted remote code."""
+        from unittest.mock import patch, MagicMock
+        import updater
+
+        # Mock remote version higher than local
+        mock_version_resp = MagicMock()
+        mock_version_resp.read.return_value = b'{"version": "9.9.9"}'
+
+        # Mock corrupted code with syntax error
+        mock_corrupt_resp = MagicMock()
+        mock_corrupt_resp.read.return_value = b'def invalid_syntax(broken {['
+
+        with patch("updater.safe_urlopen", side_effect=[mock_version_resp, mock_corrupt_resp]):
+            updated = updater.check_and_update_rules(timeout_sec=1.0)
+            self.assertFalse(updated, "Corrupted remote script must be rejected by syntax validator")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

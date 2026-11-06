@@ -533,6 +533,13 @@ def main():
         )
         return
 
+    # Silent background update of grouping rules from GitHub if online
+    try:
+        from updater import check_and_update_rules
+        check_and_update_rules(timeout_sec=2.0)
+    except Exception:
+        pass
+
     selected_mode = GroupingMode.from_string(args.mode)
     time_offset = args.time_offset
     input_file = args.input
