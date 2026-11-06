@@ -12,90 +12,121 @@
  *      WITHOUT mutating/overwriting the master table in the panel!
  */
 
+// Tangkap lokasi file script di tingkat paling awal saat file .jsx sedang dibaca ExtendScript
+var _STARTUP_SCRIPT_FILE = null;
+var _STARTUP_SCRIPT_DIR = null;
+try {
+    if ($.fileName) {
+        _STARTUP_SCRIPT_FILE = new File($.fileName);
+        if (_STARTUP_SCRIPT_FILE.exists) {
+            _STARTUP_SCRIPT_DIR = _STARTUP_SCRIPT_FILE.parent;
+        }
+    }
+} catch(e) {}
+
 (function buildAITextGeneratorPanel(thisObj) {
     var SCRIPT_NAME = "AI Text Generator";
     var loadedCaptions = [];
     var currentMode = "Long";
     var currentTimeOffset = 0.0;
+    var _CACHED_CORE_PATH = null;
 
     function getScriptFolder() {
         var SECTION_NAME = "AITextGenerator";
         var KEY_NAME = "CoreEnginePath";
 
-        // 1. Cek folder 'core' yang berada berdampingan dengan file script saat ini
+        if (_CACHED_CORE_PATH && new File(_CACHED_CORE_PATH + "/main.py").exists) {
+            return _CACHED_CORE_PATH;
+        }
+
+        // Helper untuk memvalidasi apakah sebuah path / folder berisi main.py (langsung atau di /core)
+        function checkFolder(dirPathOrFolder) {
+            if (!dirPathOrFolder) return null;
+            try {
+                var d = (dirPathOrFolder instanceof Folder) ? dirPathOrFolder : new Folder(dirPathOrFolder);
+                if (!d.exists) return null;
+                var direct = new File(d.fsName + "/main.py");
+                if (direct.exists) return d.fsName;
+                var subCore = new File(d.fsName + "/core/main.py");
+                if (subCore.exists) return d.fsName + "/core";
+            } catch(e) {}
+            return null;
+        }
+
+        // 1. Cek folder script yang ditangkap saat script pertama kali dimuat (paling akurat)
+        if (_STARTUP_SCRIPT_DIR) {
+            var found1 = checkFolder(_STARTUP_SCRIPT_DIR);
+            if (found1) {
+                _CACHED_CORE_PATH = found1;
+                try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, found1); } catch(e) {}
+                return found1;
+            }
+        }
+
+        // 2. Cek $.fileName saat ini jika masih tersedia
         try {
             if ($.fileName) {
-                var f = new File($.fileName);
-                var baseDir = f.parent.fsName;
-                if (new File(baseDir + "/core/main.py").exists) {
-                    return baseDir + "/core";
-                }
-                if (new File(baseDir + "/main.py").exists) {
-                    return baseDir;
+                var fNow = new File($.fileName);
+                var foundNow = checkFolder(fNow.parent);
+                if (foundNow) {
+                    _CACHED_CORE_PATH = foundNow;
+                    try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, foundNow); } catch(e) {}
+                    return foundNow;
                 }
             }
         } catch(e) {}
 
-        // 2. Cek lokasi tersimpan sebelumnya di After Effects Settings
+        // 3. Cek lokasi tersimpan sebelumnya di After Effects Settings
         try {
             if (app.settings.haveSetting(SECTION_NAME, KEY_NAME)) {
                 var savedPath = app.settings.getSetting(SECTION_NAME, KEY_NAME);
-                if (savedPath) {
-                    if (new File(savedPath + "/main.py").exists) {
-                        return savedPath;
-                    }
-                    if (new File(savedPath + "/core/main.py").exists) {
-                        return savedPath + "/core";
-                    }
+                var foundSaved = checkFolder(savedPath);
+                if (foundSaved) {
+                    _CACHED_CORE_PATH = foundSaved;
+                    return foundSaved;
                 }
             }
         } catch(e) {}
 
-        // 3. Cek lokasi workspace asli & folder umum pengguna (Documents, Downloads, Desktop)
+        // 4. Pencarian otomatis di lokasi umum pengguna (Windows & Mac)
         var userHome = "";
-        try {
-            userHome = Folder("~").fsName;
-        } catch(e) {
-            userHome = "";
-        }
+        try { userHome = Folder("~").fsName; } catch(e) {}
 
-        var candidates = [
-            "/Users/alfonrenaldo/Documents/antigravity/AE text automation plugins/AI Caption Generator/core",
-            userHome + "/Documents/antigravity/AE text automation plugins/AI Caption Generator/core",
-            "/Users/alfonrenaldo/Documents/antigravity/AE text automation plugins/AI_Text_Generator/core",
-            userHome + "/Documents/antigravity/AE text automation plugins/AI_Text_Generator/core",
-            "/Users/alfonrenaldo/Documents/antigravity/AE text automation plugins/core",
-            userHome + "/Documents/antigravity/AE text automation plugins/core",
-            userHome + "/Documents/AI_Text_Generator_for_Editor/core",
-            userHome + "/Documents/AI_Text_Generator/core",
-            userHome + "/Downloads/AI_Text_Generator_for_Editor/core",
-            userHome + "/Downloads/AI_Text_Generator_for_Editor/AI_Text_Generator_for_Editor/core",
-            userHome + "/Desktop/AI_Text_Generator_for_Editor/core",
-            Folder.myDocuments.fsName + "/AI_Text_Generator_for_Editor/core",
-            Folder.myDocuments.fsName + "/core",
-            Folder.desktop.fsName + "/AI_Text_Generator_for_Editor/core",
-            Folder.desktop.fsName + "/core"
+        var searchDirs = [];
+        try { if (Folder.myDocuments && Folder.myDocuments.exists) searchDirs.push(Folder.myDocuments.fsName); } catch(e) {}
+        try { if (Folder.desktop && Folder.desktop.exists) searchDirs.push(Folder.desktop.fsName); } catch(e) {}
+        try { if (userHome) searchDirs.push(userHome + "/Downloads"); } catch(e) {}
+        try { if (userHome) searchDirs.push(userHome + "/Documents"); } catch(e) {}
+        try { if (userHome) searchDirs.push(userHome + "/Desktop"); } catch(e) {}
+
+        var subNames = [
+            "",
+            "/core",
+            "/AI Caption Generator",
+            "/AI Caption Generator/core",
+            "/AI_Text_Generator",
+            "/AI_Text_Generator/core",
+            "/AI_Text_Generator_for_Editor",
+            "/AI_Text_Generator_for_Editor/core",
+            "/AI_Text_Generator_for_Editor/AI_Text_Generator_for_Editor/core",
+            "/AE text automation plugins/AI Caption Generator/core",
+            "/AE text automation plugins/AI_Text_Generator/core"
         ];
 
-        for (var i = 0; i < candidates.length; i++) {
-            try {
-                if (candidates[i] && new File(candidates[i] + "/main.py").exists) {
-                    try {
-                        app.settings.saveSetting(SECTION_NAME, KEY_NAME, candidates[i]);
-                    } catch(err) {}
-                    return candidates[i];
+        for (var s = 0; s < searchDirs.length; s++) {
+            for (var n = 0; n < subNames.length; n++) {
+                var testPath = searchDirs[s] + subNames[n];
+                var foundCand = checkFolder(testPath);
+                if (foundCand) {
+                    _CACHED_CORE_PATH = foundCand;
+                    try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, foundCand); } catch(e) {}
+                    return foundCand;
                 }
-            } catch(e) {}
+            }
         }
 
-        // 4. Default fallback: di samping file JSX
-        try {
-            if ($.fileName) {
-                var f2 = new File($.fileName);
-                return f2.parent.fsName;
-            }
-        } catch(e) {}
-
+        // 5. Default fallback
+        if (_STARTUP_SCRIPT_DIR) return _STARTUP_SCRIPT_DIR.fsName;
         return Folder.myDocuments.fsName;
     }
 
@@ -1066,8 +1097,23 @@
             var scriptFolder = getScriptFolder();
             var mainPyFile = new File(scriptFolder + "/main.py");
             if (!mainPyFile.exists) {
-                alert("Core engine 'main.py' not found at:\n" + scriptFolder + "\n\nPlease select the 'core' folder to connect it.", "Connect Core Engine");
-                var picked = Folder.selectDialog("Select 'core' folder for AI Text Generator");
+                // Periksa apakah berjalan di folder Temp (ZIP belum diekstrak)
+                var isTemp = false;
+                try {
+                    var sLower = String(scriptFolder).toLowerCase();
+                    if (sLower.indexOf("temp") !== -1 || sLower.indexOf("appdata/local/temp") !== -1 || sLower.indexOf("appdata\\local\\temp") !== -1 || sLower.indexOf("/var/folders") !== -1) {
+                        isTemp = true;
+                    }
+                } catch(e) {}
+
+                if (isTemp) {
+                    setStatus("File ZIP belum diekstrak.");
+                    alert("PERHATIAN:\nPlugin dijalankan langsung dari dalam file ZIP tanpa diekstrak terlebih dahulu.\n\nCara Memperbaiki:\n1. Tutup After Effects atau panel ini.\n2. Klik kanan file 'AI_Text_Generator_for_Editor.zip' > pilih 'Extract All' (Ekstrak Semua).\n3. Buka file 'AI_Text_Generator.jsx' dari dalam folder hasil ekstrak tersebut.", "Harap Ekstrak File ZIP");
+                    return;
+                }
+
+                alert("Folder mesin AI ('core') belum terhubung otomatis.\n\nSilakan pilih folder 'core' (atau folder hasil ekstrak plugin) pada jendela berikutnya agar After Effects dapat menyimpannya secara permanen.", "Hubungkan Folder Mesin AI");
+                var picked = Folder.selectDialog("Pilih folder 'core' untuk AI Caption Generator");
                 if (picked != null) {
                     var pFs = picked.fsName;
                     if (new File(pFs + "/main.py").exists) {
@@ -1078,13 +1124,14 @@
                     try {
                         app.settings.saveSetting("AITextGenerator", "CoreEnginePath", scriptFolder);
                     } catch(e) {}
+                    _CACHED_CORE_PATH = scriptFolder;
                     mainPyFile = new File(scriptFolder + "/main.py");
                 }
             }
 
             if (!mainPyFile.exists) {
                 setStatus("Engine folder not connected.");
-                alert("Cannot proceed because 'main.py' was not found.\nPlease ensure the 'core' folder exists on your computer.", "File Not Found");
+                alert("Tidak dapat melanjutkan karena file 'main.py' tidak ditemukan.\nPastikan folder 'core' hasil ekstrak ZIP ada di komputer Anda.", "File Core Tidak Ditemukan");
                 return;
             }
 
@@ -1093,7 +1140,7 @@
             var isWin = ($.os.indexOf("Windows") !== -1);
             var cmd = "";
             if (isWin) {
-                cmd = 'cmd.exe /c chcp 65001 >nul && ' + pyCmd + ' "' + mainPy + '" --input "' + audioFile.fsName + '" --mode ' + modeStr + ' --time-offset ' + timelineOffset;
+                cmd = 'cmd.exe /c chcp 65001 >nul && (where python >nul 2>&1 && python "' + mainPy + '" --input "' + audioFile.fsName + '" --mode ' + modeStr + ' --time-offset ' + timelineOffset + ' || py "' + mainPy + '" --input "' + audioFile.fsName + '" --mode ' + modeStr + ' --time-offset ' + timelineOffset + ')';
             } else {
                 cmd = 'export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"; ' + pyCmd + ' "' + mainPy + '" --input "' + audioFile.fsName + '" --mode ' + modeStr + ' --time-offset ' + timelineOffset + ' 2>&1';
             }
@@ -1195,7 +1242,7 @@
                 var isWin = ($.os.indexOf("Windows") !== -1);
                 var cmd = "";
                 if (isWin) {
-                    cmd = 'cmd.exe /c chcp 65001 >nul && ' + pyCmd + ' "' + mainPy + '" --translate-only --lang ' + langCode + ' 2>&1';
+                    cmd = 'cmd.exe /c chcp 65001 >nul && (where python >nul 2>&1 && python "' + mainPy + '" --translate-only --lang ' + langCode + ' || py "' + mainPy + '" --translate-only --lang ' + langCode + ') 2>&1';
                 } else {
                     cmd = 'export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"; ' + pyCmd + ' "' + mainPy + '" --translate-only --lang ' + langCode + ' 2>&1';
                 }

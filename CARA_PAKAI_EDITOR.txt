@@ -25,7 +25,8 @@ SYARAT AWAL DI KOMPUTER (HANYA SEKALI)
 ------------------------------------------------------------
 
 ▶ CARA 1: LANGSUNG PAKAI (PALING MUDAH - TANPA INSTALASI)
-1. Ekstrak file ZIP ke folder mana saja di komputer Anda.
+1. Ekstrak file ZIP ke folder mana saja di komputer Anda (misal di Desktop atau Documents).
+   *Penting:* Jangan jalankan script langsung dari dalam file ZIP tanpa mengekstraknya!
 2. Di After Effects, klik menu:
    File > Scripts > Run Script File...
 3. Pilih file 'AI_Text_Generator.jsx'.
