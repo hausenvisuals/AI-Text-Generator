@@ -88,44 +88,96 @@ try {
             }
         } catch(e) {}
 
-        // 4. Pencarian otomatis di lokasi umum pengguna (Windows & Mac)
+        // 4. PENCARIAN CERDAS & DINAMIS (Deep Silent Auto-Search)
+        // Kumpulkan folder-folder utama pengguna di macOS & Windows
         var userHome = "";
         try { userHome = Folder("~").fsName; } catch(e) {}
 
-        var searchDirs = [];
-        try { if (Folder.myDocuments && Folder.myDocuments.exists) searchDirs.push(Folder.myDocuments.fsName); } catch(e) {}
-        try { if (Folder.desktop && Folder.desktop.exists) searchDirs.push(Folder.desktop.fsName); } catch(e) {}
-        try { if (userHome) searchDirs.push(userHome + "/Downloads"); } catch(e) {}
-        try { if (userHome) searchDirs.push(userHome + "/Documents"); } catch(e) {}
-        try { if (userHome) searchDirs.push(userHome + "/Desktop"); } catch(e) {}
+        var rootSearchDirs = [];
+        try { if (userHome) rootSearchDirs.push(new Folder(userHome + "/Downloads")); } catch(e) {}
+        try { if (userHome) rootSearchDirs.push(new Folder(userHome + "/Desktop")); } catch(e) {}
+        try { if (userHome) rootSearchDirs.push(new Folder(userHome + "/Documents")); } catch(e) {}
+        try { if (Folder.myDocuments && Folder.myDocuments.exists) rootSearchDirs.push(Folder.myDocuments); } catch(e) {}
+        try { if (Folder.desktop && Folder.desktop.exists) rootSearchDirs.push(Folder.desktop); } catch(e) {}
 
-        var subNames = [
-            "",
-            "/core",
-            "/AI Caption Generator",
-            "/AI Caption Generator/core",
-            "/AI_Text_Generator",
-            "/AI_Text_Generator/core",
-            "/AI_Text_Generator_for_Editor",
-            "/AI_Text_Generator_for_Editor/core",
-            "/AI_Text_Generator_for_Editor/AI_Text_Generator_for_Editor/core",
-            "/AE text automation plugins/AI Caption Generator/core",
-            "/AE text automation plugins/AI_Text_Generator/core"
-        ];
+        for (var r = 0; r < rootSearchDirs.length; r++) {
+            var rootDir = rootSearchDirs[r];
+            if (!rootDir || !rootDir.exists) continue;
 
-        for (var s = 0; s < searchDirs.length; s++) {
-            for (var n = 0; n < subNames.length; n++) {
-                var testPath = searchDirs[s] + subNames[n];
-                var foundCand = checkFolder(testPath);
-                if (foundCand) {
-                    _CACHED_CORE_PATH = foundCand;
-                    try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, foundCand); } catch(e) {}
-                    return foundCand;
+            // A. Cek langsung rootDir/core/main.py
+            var candRoot = checkFolder(rootDir);
+            if (candRoot) {
+                _CACHED_CORE_PATH = candRoot;
+                try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, candRoot); } catch(e) {}
+                return candRoot;
+            }
+
+            // B. Scan dinamis semua subfolder yang ada di dalam Downloads / Desktop / Documents
+            try {
+                var childList = rootDir.getFiles();
+                if (childList && childList.length) {
+                    for (var c = 0; c < childList.length; c++) {
+                        var childItem = childList[c];
+                        if (childItem instanceof Folder) {
+                            var childNameLower = childItem.name.toLowerCase();
+                            // Prioritaskan folder yang mengandung kata ai, caption, text, generator, plugin, core
+                            if (childNameLower.indexOf("ai") !== -1 || 
+                                childNameLower.indexOf("caption") !== -1 || 
+                                childNameLower.indexOf("text") !== -1 || 
+                                childNameLower.indexOf("core") !== -1 || 
+                                childNameLower.indexOf("generator") !== -1 ||
+                                childNameLower.indexOf("editor") !== -1) {
+                                
+                                var candChild = checkFolder(childItem);
+                                if (candChild) {
+                                    _CACHED_CORE_PATH = candChild;
+                                    try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, candChild); } catch(e) {}
+                                    return candChild;
+                                }
+                                // Cek 1 level lebih dalam jika ada folder di dalam folder ekstrak
+                                try {
+                                    var subSubList = childItem.getFiles();
+                                    if (subSubList && subSubList.length) {
+                                        for (var ss = 0; ss < subSubList.length; ss++) {
+                                            if (subSubList[ss] instanceof Folder) {
+                                                var candSubSub = checkFolder(subSubList[ss]);
+                                                if (candSubSub) {
+                                                    _CACHED_CORE_PATH = candSubSub;
+                                                    try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, candSubSub); } catch(e) {}
+                                                    return candSubSub;
+                                                }
+                                            }
+                                        }
+                                    }
+                                } catch(eSS) {}
+                            }
+                        }
+                    }
                 }
+            } catch(eScan) {}
+        }
+
+        // 5. Cek folder umum yang diketahui jika belum ketemu
+        var knownPaths = [
+            userHome + "/Downloads/AI Caption Generator/core",
+            userHome + "/Desktop/AI Caption Generator/core",
+            userHome + "/Documents/AI Caption Generator/core",
+            userHome + "/Downloads/AI_Text_Generator_for_Editor/core",
+            userHome + "/Desktop/AI_Text_Generator_for_Editor/core",
+            userHome + "/Documents/AI_Text_Generator_for_Editor/core",
+            "/Applications/Adobe After Effects 2025/Scripts/ScriptUI Panels/core",
+            "/Applications/Adobe After Effects 2024/Scripts/ScriptUI Panels/core"
+        ];
+        for (var k = 0; k < knownPaths.length; k++) {
+            var candK = checkFolder(knownPaths[k]);
+            if (candK) {
+                _CACHED_CORE_PATH = candK;
+                try { app.settings.saveSetting(SECTION_NAME, KEY_NAME, candK); } catch(e) {}
+                return candK;
             }
         }
 
-        // 5. Default fallback
+        // 6. Default fallback
         if (_STARTUP_SCRIPT_DIR) return _STARTUP_SCRIPT_DIR.fsName;
         return Folder.myDocuments.fsName;
     }
@@ -134,10 +186,15 @@ try {
         var isWin = ($.os.indexOf("Windows") !== -1);
         if (isWin) return "python";
 
-        // Di macOS, utamakan binary python3 yang ada di sistem / Homebrew / CommandLineTools
+        // Di macOS, utamakan binary python3 yang ada di sistem / Homebrew / python.org / CommandLineTools
         var candidates = [
             "/opt/homebrew/bin/python3",
             "/usr/local/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/Current/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.13/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.12/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.11/bin/python3",
+            "/Library/Frameworks/Python.framework/Versions/3.10/bin/python3",
             "/Library/Developer/CommandLineTools/usr/bin/python3",
             "/usr/bin/python3"
         ];
@@ -1178,7 +1235,11 @@ try {
 
             // Diagnosa penyebab kesalahan secara otomatis dan tampilkan ke editor
             var cleanOut = pyOutput ? pyOutput.replace(/^\s+|\s+$/g, "") : "";
-            if (!cleanOut || cleanOut.indexOf("command not found") !== -1 || cleanOut.indexOf("not recognized") !== -1) {
+            if (cleanOut.indexOf("xcode-select") !== -1 || cleanOut.indexOf("developer tools") !== -1) {
+                try { system.callSystem("xcode-select --install"); } catch(e) {}
+                alert("Komponen Python Apple di Mac ini memerlukan aktivasi.\n\nSilakan periksa layar Anda dan klik 'Install' pada jendela Apple yang muncul.\n(Tips: Atau pasang Python resmi dalam 30 detik dari python.org/downloads).\n\nSetelah terpasang, silakan klik 'Generate Captions' kembali.", "Aktivasi Python Apple");
+                return;
+            } else if (!cleanOut || cleanOut.indexOf("command not found") !== -1 || cleanOut.indexOf("not recognized") !== -1) {
                 alert("Python 3 was not found on your system.\n\nPlease ensure Python 3 is installed.\nDetails: " + cleanOut, "Python Not Found");
             } else if (cleanOut.indexOf("Transcribed 0 words") !== -1 || cleanOut.indexOf("No spoken words") !== -1) {
                 alert("No spoken words detected in the selected Work Area (B & N).\n\nTips:\n1. Ensure the Work Area spans audio where someone is speaking.\n2. Ensure the audio layer is not muted.\n3. Try expanding the Work Area.", "Silence / No Speech Detected");
@@ -1336,8 +1397,8 @@ try {
                     }
                 }
 
-                // Add layers backwards so #1 stays on top
-                for (var i = captions.length - 1; i >= 0; i--) {
+                // Add layers forwards so earliest caption (#1) stays at the bottom, and newer captions stack on top
+                for (var i = 0; i < captions.length; i++) {
                     var c = captions[i];
                     var capText = c.text || "";
                     var sTime = parseFloat(c.start);

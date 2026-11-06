@@ -120,8 +120,8 @@
             }
         }
 
-        // Iterate backwards so Caption_001 ends up on top of the layer stack
-        for (var i = captions.length - 1; i >= 0; i--) {
+        // Iterate forwards so Caption_001 ends up at the bottom, and newer captions stack on top
+        for (var i = 0; i < captions.length; i++) {
             var item = captions[i];
             var captionText = item.text || "";
             var startTime = parseFloat(item.start);
