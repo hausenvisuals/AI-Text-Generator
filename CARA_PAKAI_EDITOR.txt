@@ -1,0 +1,104 @@
+============================================================
+🎬 PANDUAN PENGGUNAAN AI TEXT GENERATOR (AFTER EFFECTS)
+============================================================
+
+Plugin ini sudah siap pakai (Plug and Play) untuk Mac & Windows.
+Kunci API dan sistem transkripsi sudah tertanam di dalam folder 'core'.
+
+------------------------------------------------------------
+SYARAT AWAL DI KOMPUTER (HANYA SEKALI)
+------------------------------------------------------------
+1. Python 3:
+   - Mac: Sudah otomatis tersedia bawaan macOS.
+   - Windows: Pastikan sudah terpasang Python 3 (dari python.org).
+     * Saat install di Windows, centang kotak: [v] "Add python.exe to PATH".
+
+2. Izin Script di After Effects:
+   - Buka Adobe After Effects.
+   - Mac: After Effects > Settings (Preferences) > Scripting & Expressions
+   - Windows: Edit > Preferences > Scripting & Expressions
+   - Centang: [v] Allow Scripts to Write Files and Access Network
+   - Klik OK.
+
+------------------------------------------------------------
+2 CARA MENJALANKAN PLUGIN DI AFTER EFFECTS
+------------------------------------------------------------
+
+▶ CARA 1: LANGSUNG PAKAI (PALING MUDAH - TANPA INSTALASI)
+1. Ekstrak file ZIP ke folder mana saja di komputer Anda.
+2. Di After Effects, klik menu:
+   File > Scripts > Run Script File...
+3. Pilih file 'AI_Text_Generator.jsx'.
+4. Selesai! Panel langsung terbuka dan siap digunakan.
+
+▶ CARA 2: MASUK KE MENU AFTER EFFECTS (DOCKABLE PANEL)
+Jika Anda ingin plugin ini selalu muncul di menu Window After Effects:
+1. Salin file 'AI_Text_Generator.jsx' DAN folder 'core' ke:
+   - Mac: /Applications/Adobe After Effects <versi>/Scripts/ScriptUI Panels/
+   - Windows: C:\Program Files\Adobe\Adobe After Effects <versi>\Support Files\Scripts\ScriptUI Panels\
+2. Buka After Effects, klik menu Window > AI_Text_Generator.jsx.
+*Catatan:* Jika Anda hanya memindahkan file 'AI_Text_Generator.jsx' saja tanpa folder 'core', After Effects akan otomatis menampilkan jendela untuk memilih lokasi folder 'core' SEKALI SAJA, lalu menyimpannya secara permanen.
+
+------------------------------------------------------------
+LANGKAH PENGGUNAAN SEHARI-HARI
+------------------------------------------------------------
+
+1. TANDAI WORK AREA:
+   - Buka timeline komposisi video Anda.
+   - Tekan shortcut keyboard:
+     * Tombol B untuk batas AWAL bicara (In Point)
+     * Tombol N untuk batas AKHIR bicara (Out Point)
+   - Pastikan icon speaker (🔈) pada layer audio aktif (tidak di-mute).
+
+2. EXPORT & SUSUN TEKS:
+   - Pilih Mode tampilan:
+     * Long (3–5 words) — frasa kalimat utuh & mengalir (otomatis menjaga keutuhan kata majemuk hingga 7 kata)
+     * Short (2–3 words) — punchy conversational (2–4 kata)
+     * Single Word (1 word) — gaya TikTok / Reels
+   - Klik tombol [ Generate Captions from Work Area ].
+   - Teks dan waktu bicara akan otomatis tersusun di tabel Review! Jeda mikro antar kata sudah otomatis menempel tanpa jeda kosong (gap 0.00s).
+
+3. EDIT LANGSUNG DI TEMPAT (STAY IN PLACE):
+   - Klik langsung pada teks subtitle: Kursor langsung berkedip di tempat kata yang Anda klik! Tidak ada pergeseran layout atau teks yang terpotong.
+   - Klik langsung pada kotak waktu: Nilai Start & End bisa langsung Anda ubah detiknya secara instan.
+   - Tekan [ Enter ] untuk simpan otomatis dan pindah ke baris teks berikutnya di bawahnya.
+
+4. SELEKSI TEKS NORMAL & SHORTCUT:
+   - Mem-block teks: Anda bisa dengan leluasa men-drag mouse untuk memilih/mem-block sebagian kata atau kalimat. Highlight seleksi berwarna normal dan jelas terlihat.
+   - Shortcut Teks:
+     * Cmd+A / Ctrl+A: Pilih semua teks dalam baris.
+     * Cmd+C / Ctrl+C: Salin (Copy).
+     * Cmd+V / Ctrl+V: Tempel (Paste).
+     * Cmd+X / Ctrl+X: Potong (Cut).
+   - Shortcut Tabel:
+     * Cmd+Z / Ctrl+Z: Undo (membatalkan perubahan teks, waktu, atau baris).
+     * Cmd+Shift+Z / Ctrl+Shift+Z / Ctrl+Y: Redo.
+
+5. NAVIGASI & SCROLL:
+   - Tombol Panah Layar: Klik [ ▲ ] (Naik) dan [ ▼ ] (Turun) di sebelah kanan tabel untuk berpindah baris.
+   - Slider Scrollbar: Tarik slider scrollbar vertikal di sebelah kanan tabel.
+   - Keyboard Navigation di Kolom Teks:
+     * Tekan [ Panah Bawah ]: Berpindah ke baris teks di bawahnya (jika berada di baris terbawah, tabel otomatis men-scroll ke bawah).
+     * Tekan [ Panah Atas ]: Berpindah ke baris teks di atasnya (jika berada di baris teratas, tabel otomatis men-scroll ke atas).
+     * Tekan [ Page Down ] / [ Page Up ]: Scroll langsung per halaman (7 baris sekaligus).
+   - Indikator posisi baris (misal: "1-7 / 19") otomatis tertera di pojok kanan atas tabel.
+
+6. MENAMBAH & MENGHAPUS BARIS:
+   - Klik nomor baris atau klik teks pada baris yang diinginkan (misal: #1, #2).
+   - Klik [ Add Row ]: Baris baru otomatis ditambahkan tepat di bawahnya, tersinkronisasi waktunya, dan kursor langsung aktif di kotak teks baru.
+   - Klik [ Delete Row ]: Menghapus baris terpilih dan merapikan kembali penomoran urut.
+   - Klik [ Refresh ]: Memuat ulang data master dari disk jika diperlukan.
+
+7. IMPORT KE TIMELINE:
+   - Pilih Bahasa pada dropdown Language:
+     * 'Original Language'
+     * 'Translate to Indonesian'
+     * 'Translate to English'
+   - Klik [ Import to Timeline ].
+   - Seluruh layer teks otomatis terbuat di timeline After Effects dengan sinkronisasi presisi!
+
+============================================================
+TIPS:
+- Jika ingin membatalkan hasil import pada timeline AE, tekan Cmd+Z (Mac) atau Ctrl+Z (Windows).
+- Panel ScriptUI ini dapat didock / diselipkan ke panel After Effects lainnya sesuai selera Anda.
+============================================================

@@ -1,0 +1,23 @@
+# Environment variables & secrets (CRITICAL: NEVER COMMIT TO GIT)
+.env
+core/.env
+*.env
+*.env.local
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+core/__pycache__/
+*.py[cod]
+*$py.class
+
+# Output directory and temp audio/stt files
+core/output/*
+!core/output/.gitkeep
+output/
+
+# macOS system files
+.DS_Store
+*/.DS_Store
+
+# Distribution archives
+*.zip
