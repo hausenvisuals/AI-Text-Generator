@@ -29,72 +29,52 @@ from grouping_rules import (
 )
 from stt_service import WordToken
 
-# Words that naturally open prepositional, adverbial, or conjunctional phrases
+# Words that naturally open prepositional, adverbial, or conjunctional phrases (English, Spanish, Indonesian)
 PHRASE_STARTERS = {
-    "to",
-    "in",
-    "on",
-    "at",
-    "by",
-    "for",
-    "with",
-    "about",
-    "into",
-    "through",
-    "from",
-    "under",
-    "over",
-    "a",
-    "an",
-    "the",
-    "and",
-    "or",
-    "but",
-    "inside",
-    "outside",
-    "after",
-    "before",
-    "while",
-    "when",
+    # English
+    "to", "in", "on", "at", "by", "for", "with", "about", "into", "through", "from",
+    "under", "over", "a", "an", "the", "and", "or", "but", "inside", "outside",
+    "after", "before", "while", "when",
+    # Spanish
+    "a", "en", "de", "con", "por", "para", "sin", "sobre", "desde", "hasta", "hacia",
+    "el", "la", "los", "las", "un", "una", "unos", "unas", "del", "al", "que", "y", "e",
+    "o", "u", "pero", "cuando", "donde", "como", "porque",
+    # Indonesian
+    "di", "ke", "dari", "pada", "untuk", "dengan", "dalam", "tentang", "setelah",
+    "sebelum", "ketika", "saat", "dan", "atau", "tetapi", "tapi", "karena", "bahwa", "jika",
 }
 
-# Connective words that shouldn't sit awkwardly at the end of a caption group
+# Connective words that shouldn't sit awkwardly at the end of a caption group (English, Spanish, Indonesian)
 DANGLING_END_WORDS = {
-    "the",
-    "a",
-    "an",
-    "to",
-    "of",
-    "in",
-    "on",
-    "at",
-    "by",
-    "for",
-    "with",
-    "and",
-    "or",
-    "but",
-    "that",
-    "which",
-    "as",
-    "is",
-    "are",
-    "was",
-    "were",
-    "my",
-    "your",
-    "his",
-    "her",
-    "our",
-    "their",
+    # English
+    "the", "a", "an", "to", "of", "in", "on", "at", "by", "for", "with", "and", "or",
+    "but", "that", "which", "as", "is", "are", "was", "were", "my", "your", "his",
+    "her", "our", "their",
+    # Spanish (Articles, Possessives, Prepositions, Conjunctions, Numerals)
+    "el", "la", "los", "las", "un", "una", "unos", "unas", "del", "al", "lo",
+    "mi", "mis", "tu", "tus", "su", "sus", "nuestro", "nuestra", "nuestros", "nuestras",
+    "de", "en", "a", "con", "por", "para", "sin", "sobre", "hacia", "desde", "hasta",
+    "entre", "bajo", "contra", "que", "y", "e", "o", "u", "pero", "sino", "porque",
+    "como", "si", "aunque", "donde", "cuando", "más", "mas", "menos", "tan", "muy",
+    "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+    "veinte", "treinta", "cuarenta", "cincuenta", "es", "son", "fue", "era", "está",
+    "estan", "están", "ha", "han",
+    # Indonesian
+    "di", "ke", "dari", "pada", "untuk", "dengan", "dan", "atau", "tapi", "tetapi",
+    "yang", "ini", "itu", "sebuah", "para", "sang", "si", "dalam", "atas", "bawah",
+    "oleh", "karena", "sebab", "agar", "supaya", "jika", "kalau", "saat", "ketika",
+    "adalah", "ialah", "yaitu", "merupakan", "akan", "telah", "sudah", "sedang",
+    "bisa", "dapat", "lebih", "kurang", "sangat", "paling",
 }
 
 # Known multi-word proper nouns, compounds, and amenities that should never be split across captions
 KNOWN_COMPOUNDS = [
+    # Florida proper locations and communities
     ("marco", "island"),
     ("bonita", "springs"),
     ("fort", "myers"),
     ("caloosa", "cove"),
+    ("calusa", "cove"),
     ("miami", "lakes"),
     ("realty", "group"),
     ("vanguard", "realty"),
@@ -131,6 +111,40 @@ KNOWN_COMPOUNDS = [
     ("valet", "parking"),
     ("water", "front"),
     ("living", "room"),
+    # Spanish kinetic typography phrases, community collocations & proper terms
+    ("pueblos", "pequeños"),
+    ("pueblos", "pequenos"),
+    ("centro", "histórico"),
+    ("centro", "historico"),
+    ("lugares", "favoritos"),
+    ("comunidad", "privada"),
+    ("cuotas", "de"),
+    ("de", "cdd"),
+    ("sentido", "de"),
+    ("de", "comunidad"),
+    ("a", "orillas"),
+    ("orillas", "del"),
+    ("del", "río"),
+    ("del", "rio"),
+    ("echar", "raíces"),
+    ("echar", "raices"),
+    ("toda", "la"),
+    ("la", "familia"),
+    ("totalmente", "nuevas"),
+    ("hoy", "mismo"),
+    ("sin", "embargo"),
+    ("más", "allá"),
+    ("mas", "alla"),
+    ("más", "que"),
+    ("mas", "que"),
+    ("más", "tranquilo"),
+    ("mas", "tranquilo"),
+    ("más", "tranquilos"),
+    ("mas", "tranquilos"),
+    ("barrios", "bulliciosos"),
+    ("treinta", "minutos"),
+    ("dos", "horas"),
+    ("lo", "que"),
 ]
 
 
@@ -245,13 +259,19 @@ def _is_dramatic_single_word_pause(
     else:
         pause_after = 1.0
 
-    # Common reaction / affirmation words
+    # Common reaction / affirmation words (English, Spanish, Indonesian)
     clean = _clean_word(tok.text)
     is_reaction_word = clean in {
+        # English
         "yes", "no", "yeah", "yep", "nope", "exactly",
         "absolutely", "never", "always", "why", "right",
         "sure", "true", "false", "nothing", "now", "stop", "wait", "ok", "okay",
-        "definitely", "totally", "correct", "indeed"
+        "definitely", "totally", "correct", "indeed",
+        # Spanish
+        "sí", "si", "claro", "exacto", "exactamente", "nada", "jamás", "jamas",
+        "nunca", "verdad", "cierto", "obvio", "bueno",
+        # Indonesian
+        "ya", "tidak", "betul", "benar", "pasti", "tentu", "tepat",
     }
 
     # If it's a reaction word with pause >= 0.35s either before or after
@@ -961,8 +981,10 @@ def heuristic_grouping(
             elif count >= target_min and not is_last_token:
                 # Check if next word begins a natural prepositional or relative phrase
                 next_word_clean = _clean_word(tokens[i + 1].text)
+                curr_word_clean = _clean_word(tok.text)
                 if (
                     next_word_clean in PHRASE_STARTERS
+                    and curr_word_clean not in DANGLING_END_WORDS
                     and words_until_bound >= target_min
                 ):
                     should_split = True

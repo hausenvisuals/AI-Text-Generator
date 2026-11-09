@@ -99,13 +99,18 @@ def build_llm_prompt_for_mode(mode: GroupingMode, word_list_text: str, total_wor
 2. TARGET RITME: 3–5 KATA PER SUBTITLE (FLEKSIBILITAS SEMANTIK 2–7 KATA).
    - Kisaran 3–5 kata adalah ritme visual ideal video vertikal (TikTok/Reels/Shorts).
    - REKOMENDASI AI & FLEKSIBILITAS SEMANTIK (Hingga 6–7 Kata): Berikan fleksibilitas elastis hingga 6 atau maksimal 7 kata JIKA diperlukan untuk menjaga keutuhan kata majemuk, nama fasilitas/tempat (misal: "private beach club,", "beachfront fire pits,"), atau agar klausa yang berakhiran tanda koma (,) tidak terpotong canggung di tengah jalan. Utamakan keutuhan makna dan jeda koma di atas kekakuan hitungan angka kata!
-3. FORMULA SINTAKSIS & FRASA TATA BAHASA (SYNTACTIC CHUNKING):
+3. FORMULA SINTAKSIS & FRASA TATA BAHASA (SYNTACTIC CHUNKING - ENGLISH / SPANISH / INDONESIAN):
    - Gabungkan kata berdasarkan unit gramatikal yang utuh: Frasa Benda (Noun Phrase), Frasa Kata Sifat (Adj + Noun), Frasa Kata Depan (Prepositional Phrase).
-   - JANGAN MEMOTONG di tengah gabungan kata yang merupakan satu kesatuan makna, nama, brand, fasilitas, atau istilah majemuk (misal: "Marco Island", "Bonita Springs", "Fort Myers", "Caloosa Cove", "Miami Lakes", "I-75", "HOA", "Realty Group", "Vanguard Realty Group", "Southwest Florida", "real estate", "real estate expert", "luxury waterfront property", "trusted partner", "beach club", "private beach club", "fire pits", "beachfront fire pits", "tiki bar", "tennis courts", "swimming pool", "fitness center", "dining room", "dining lawn").
-   - KATA KUNCI FASILITAS & PROPERTI ("beach club", "fire pits", "tiki bar", "tennis courts", "real estate expert"): HARUS SELALU MENJADI SATU KESATUAN UTUH (jangan pernah memisahkan "beach" di satu layer dan "club" di layer berikutnya, atau "fire" dan "pits").
-   - JANGAN MEMBIARKAN KATA GANTUNG: Hindari memotong frasa yang membuat kata sandang/kepemilikan (the, a, an, our, your) atau kata depan (to, of, in, on, at, by, for, with) menggantung canggung di akhir baris tanpa kata bendanya.
-   - Potonglah di batas frasa yang alami (misal: potong sebelum kata depan "to local expertise", atau sebelum konjungsi "and", "or", "but").
-   - Jangan memisahkan angka dengan satuannya jika memungkinkan (misal: "30 minutes", "$500").
+   - JANGAN MEMOTONG di tengah gabungan kata yang merupakan satu kesatuan makna, nama, brand, fasilitas, atau istilah majemuk:
+     * English: "Marco Island", "Bonita Springs", "Fort Myers", "Caloosa Cove", "Calusa Cove", "Miami Lakes", "I-75", "HOA", "Realty Group", "Vanguard Realty Group", "Southwest Florida", "real estate", "real estate expert", "luxury waterfront property", "trusted partner", "beach club", "private beach club", "fire pits", "beachfront fire pits", "tiki bar", "tennis courts", "swimming pool", "fitness center", "dining room", "dining lawn".
+     * Spanish: "Calusa Cove", "Fort Myers", "sentido de comunidad", "pueblos pequeños", "centro histórico", "comunidad privada", "cuotas de CDD", "a orillas del río", "echar raíces", "más que", "más allá", "sin embargo", "toda la familia", "totalmente nuevas", "hoy mismo", "lo que".
+     * Indonesian: "real estat", "kolam renang", "lapangan tenis", "pusat kebugaran", "ruang makan", "rumah terbuka", "agen properti".
+   - KATA KUNCI FASILITAS, LOKASI & PROPERTI: HARUS SELALU MENJADI SATU KESATUAN UTUH (jangan memisahkan "beach" dan "club", "Calusa" dan "Cove", "sentido" dan "de comunidad").
+   - JANGAN MEMBIARKAN KATA GANTUNG:
+     * Hindari memotong frasa yang membuat kata sandang/kepemilikan (the, a, an, our; el, la, los, las, un, una, del, al, su, sus, mi, tu) atau kata depan/konjungsi (to, of, in, on, at, by, for, with, and, or; de, en, a, con, por, para, sin, sobre, que, y, e, o, u) menggantung canggung di akhir baris tanpa kata bendanya.
+     * Kata depan atau konjungsi (seperti "and", "y", "con", "por", "to") harus menjadi kata PEMBUKA di baris baru, bukan kata penutup yang menggantung.
+   - Potonglah di batas frasa yang alami (misal: potong sebelum kata depan "to local expertise", atau sebelum konjungsi "and", "y a dos horas de Miami").
+   - Jangan memisahkan angka dengan satuannya jika memungkinkan (misal: "30 minutes", "treinta minutos", "dos horas", "$500").
    - Setiap subtitle harus berdiri sebagai satu "visual chunk" yang utuh, tidak menggantung, dan enak dibaca dalam 1-2 detik.
 4. JIKA TERSISA 1 KATA DI AKHIR KALIMAT: Selalu gabungkan dengan grup sebelumnya (asal total <= 7 kata) atau seimbangkan (misal 3+2 kata, bukan 4+1 kata).
 5. STRICT SENTENCE BOUNDARY: JANGAN PERNAH MENYEBERANG TANDA TITIK (.), TANDA TANYA (?), ATAU TANDA SERU (!). Kata yang memiliki tanda titik (.) di belakangnya HARUS menjadi kata TERAKHIR di grupnya. Awal kalimat berikutnya HARUS dimulai pada grup subtitle baru!
@@ -128,11 +133,11 @@ def build_llm_prompt_for_mode(mode: GroupingMode, word_list_text: str, total_wor
 2. TARGET: 2–3 KATA PER SUBTITLE. Toleransi maksimal 1 kata (Range: 2 sampai 4 kata per grup).
    - Range kata per grup: HARUS ANTARA 2 SAMPAI 4 KATA.
 3. Potonglah di batas frasa yang alami, cepat, dan punchy untuk video vertikal (Reels/TikTok/Shorts).
-4. PANDUAN PEMENGGALAN FRASA LOGIS & COMPOUND TERMS:
-   - JANGAN MEMOTONG di tengah gabungan kata yang merupakan satu kesatuan nama/istilah/brand/fasilitas (misal: "Marco Island", "Bonita Springs", "Fort Myers", "Vanguard Realty Group", "Southwest Florida", "real estate", "real estate expert", "beach club", "fire pits", "tiki bar").
-   - KATA KUNCI "beach club", "fire pits", "tiki bar", "real estate expert": HARUS SELALU MENJADI SATU KESATUAN UTUH.
-   - JANGAN MEMBIARKAN KATA GANTUNG (misal: "backed by", "part of").
-   - Jangan memisahkan angka dengan satuannya.
+4. PANDUAN PEMENGGALAN FRASA LOGIS & COMPOUND TERMS (ENGLISH / SPANISH / INDONESIAN):
+   - JANGAN MEMOTONG di tengah gabungan kata yang merupakan satu kesatuan nama/istilah/brand/fasilitas (misal: "Marco Island", "Bonita Springs", "Fort Myers", "Calusa Cove", "Vanguard Realty Group", "Southwest Florida", "real estate", "real estate expert", "beach club", "fire pits", "tiki bar", "sentido de comunidad", "pueblos pequeños", "centro histórico", "comunidad privada", "más que", "sin embargo").
+   - KATA KUNCI FASILITAS & LOKASI: HARUS SELALU MENJADI SATU KESATUAN UTUH.
+   - JANGAN MEMBIARKAN KATA GANTUNG: Hindari memotong frasa yang membuat kata sandang/kepemilikan (the, a; el, la, los, las, un, una, del, al, su) atau kata depan/konjungsi (to, of, in, with; de, en, a, con, por, para, sin, que, y, o) menggantung di akhir baris.
+   - Jangan memisahkan angka dengan satuannya (misal: "30 minutes", "treinta minutos").
    - Setiap subtitle harus berdiri sebagai satu "visual chunk" yang utuh dan tidak menggantung.
 5. JIKA TERSISA 1 KATA DI AKHIR KALIMAT: Selalu gabungkan atau seimbangkan (misal 2+2 kata, bukan 3+1 kata).
 6. STRICT SENTENCE BOUNDARY: JANGAN PERNAH MENYEBERANG TANDA TITIK (.), TANDA TANYA (?), ATAU TANDA SERU (!). Kata yang memiliki tanda titik (.) di belakangnya HARUS menjadi kata TERAKHIR di grupnya. Awal kalimat berikutnya HARUS dimulai pada grup subtitle baru!

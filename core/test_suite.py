@@ -694,6 +694,37 @@ class TestCaptionGenerator(unittest.TestCase):
             updated = updater.check_and_update_rules(timeout_sec=1.0)
             self.assertFalse(updated, "Corrupted remote script must be rejected by syntax validator")
 
+    def test_spanish_kinetic_typography_grouping(self):
+        """Verify Spanish phrasing: no dangling articles/conjunctions and compounds protected."""
+        spanish_text = (
+            "Más gente está cambiando los barrios bulliciosos por los barrios más tranquilos. "
+            "Porque están prefiriendo un lugar más tranquilo, sin tráfico y con sentido de comunidad. "
+            "Eso es exactamente lo que encontrarás en Calusa Cove. "
+            "Sin embargo, a solo treinta minutos de Fort Myers y a dos horas de Miami."
+        )
+        tokens = [
+            WordToken(text=w, start=i * 0.35, end=i * 0.35 + 0.30, index=i)
+            for i, w in enumerate(spanish_text.split())
+        ]
+        groups = heuristic_grouping(tokens, mode=GroupingMode.LONG)
+        valid, msg = validate_caption_groups(groups, tokens, mode=GroupingMode.LONG)
+        self.assertTrue(valid, f"Spanish groups failed validation: {msg}")
+
+        # Assert no dangling articles or conjunctions at line ends
+        for g in groups:
+            clean_last = g.text.strip().rstrip(".,!?").split()[-1].lower()
+            self.assertNotIn(
+                clean_last,
+                {"los", "las", "el", "la", "del", "al", "y", "e", "o", "u"},
+                f"Group '{g.text}' ended with dangling word '{clean_last}'"
+            )
+            # Ensure no 1-word orphan
+            self.assertGreaterEqual(g.word_count, 2, f"Group '{g.text}' is a 1-word orphan")
+
+        # Verify compound Calusa Cove kept together
+        cove_found = any("Calusa Cove" in g.text for g in groups)
+        self.assertTrue(cove_found, "Compound 'Calusa Cove' must not be split across groups")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

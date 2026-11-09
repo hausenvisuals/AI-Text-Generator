@@ -8,10 +8,28 @@ Kunci API dan sistem transkripsi sudah tertanam di dalam folder 'core'.
 ------------------------------------------------------------
 SYARAT AWAL DI KOMPUTER (HANYA SEKALI)
 ------------------------------------------------------------
-1. Python 3:
-   - Mac: Sudah otomatis tersedia bawaan macOS.
-   - Windows: Pastikan sudah terpasang Python 3 (dari python.org).
-     * Saat install di Windows, centang kotak: [v] "Add python.exe to PATH".
+1. Python 3 (Syarat Wajib Mesin AI):
+   Versi yang didukung: Python 3 versi berapa pun (3.8 hingga 3.13).
+   Plugin ini Zero-Dependency (tidak perlu install modul / pip tambahan).
+
+   ▶ JIKA DI MAC BELUM TERPASANG PYTHON:
+     Cara 1 (Paling Mudah):
+     - Buka Terminal di Mac Anda, ketik: python3 --version lalu tekan Enter.
+     - Mac akan otomatis menampilkan jendela: "The python3 command requires the command line developer tools".
+     - Klik tombol [Install] > [Agree]. Tunggu 1-2 menit hingga selesai. Selesai!
+     
+     Cara 2 (Download Langsung):
+     - Buka https://www.python.org/downloads/
+     - Klik tombol kuning "Download Python 3.12" (atau versi terbaru).
+     - Buka file installer (.pkg) > klik Continue > Install seperti install aplikasi biasa.
+
+   ▶ JIKA DI WINDOWS BELUM TERPASANG PYTHON:
+     - Buka https://www.python.org/downloads/
+     - Klik tombol kuning "Download Python 3.12" (atau versi terbaru).
+     - Buka file installer (.exe).
+     - PENTING: Pada jendela awal install, centang kotak paling bawah:
+       [v] "Add python.exe to PATH"   <-- (WAJIB DICENTANG!)
+     - Klik "Install Now". Tunggu hingga selesai.
 
 2. Izin Script di After Effects:
    - Buka Adobe After Effects.
