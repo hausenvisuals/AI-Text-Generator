@@ -508,7 +508,7 @@ def _repair_compound_splits(
             if w_last == c1 and w_first == c2:
                 # Compound split detected across groups[i] and groups[i+1]
                 # Option 2 Check first (Backward move):
-                # If c2 ends with a comma (e.g. "club,") or moving c2 backward keeps groups[i] <= max_tolerance
+                # If c2 ends with a comma (e.g. "club,") and moving c2 backward keeps groups[i] <= max_tolerance
                 # and leaves groups[i+1] valid (or collapses it if empty), move c2 backward so group i ends cleanly!
                 c2_ends_comma = tokens[groups[i + 1][0]].text.rstrip().endswith(",")
                 can_move_c2_back = (
@@ -524,7 +524,7 @@ def _repair_compound_splits(
                         groups[i].append(borrowed)
                     break
 
-                # Option 1: Move c1 (and any preceding words in the same compound chain / preposition) forward to groups[i+1]
+                # Option 1: Move c1 (and any preceding words in the same compound chain / preposition / article) forward to groups[i+1]
                 chain_prefix = [groups[i].pop()]
                 while groups[i]:
                     prev_w = _clean_word(tokens[groups[i][-1]].text)
@@ -533,9 +533,11 @@ def _repair_compound_splits(
                         chain_prefix.insert(0, groups[i].pop())
                     else:
                         break
-                if groups[i] and _clean_word(tokens[groups[i][-1]].text) in {"of", "in", "to", "for", "with", "at", "by", "the", "a"}:
+                while groups[i] and _clean_word(tokens[groups[i][-1]].text) in DANGLING_END_WORDS:
                     if len(groups[i]) - 1 >= rules.min_tolerance:
                         chain_prefix.insert(0, groups[i].pop())
+                    else:
+                        break
 
                 if len(groups[i]) >= rules.min_tolerance and len(groups[i + 1]) + len(chain_prefix) <= rules.max_tolerance:
                     groups[i + 1] = chain_prefix + groups[i + 1]
@@ -883,7 +885,19 @@ def heuristic_grouping(
             next_tok = tokens[i + 1]
             pause_after = max(0.0, next_tok.start - tok.end)
 
-        # Lookahead: how many words remain until next sentence boundary or pause?
+        # Lookahead: how many words remain until next clause boundary (, ; : . ! ?) or pause?
+        words_until_clause = 0
+        for j in range(i + 1, len(tokens)):
+            words_until_clause += 1
+            if any(tokens[j].text.rstrip().endswith(p) for p in [",", ";", ":", ".", "!", "?"]):
+                break
+            if (
+                j < len(tokens) - 1
+                and (tokens[j + 1].start - tokens[j].end) >= max_pause_sec
+            ):
+                break
+
+        # Lookahead: how many words remain until next sentence boundary (. ! ?) or pause?
         words_until_bound = 0
         for j in range(i + 1, len(tokens)):
             words_until_bound += 1
@@ -904,26 +918,17 @@ def heuristic_grouping(
             should_split = True
         elif ends_sentence or pause_after >= max_pause_sec:
             should_split = True
-        elif ends_comma and count >= rules.min_tolerance and words_until_bound >= rules.min_tolerance:
-            # Check point length in an enumeration:
-            # If current point has < 3 words, and next words form another short point (< 3 words)
-            # that together fit within target_max, do NOT split early! Let them combine into a 4-5 word line.
-            # But if current point already has >= 3 words, it is substantial -> split now!
-            if count < 3 and not is_last_token:
-                next_point_len = 0
-                for k in range(i + 1, len(tokens)):
-                    next_point_len += 1
-                    if tokens[k].text.rstrip().endswith(",") or any(tokens[k].text.rstrip().endswith(p) for p in [".", "!", "?"]):
-                        break
-                if 1 <= next_point_len < 3 and (count + next_point_len <= target_max):
-                    should_split = False
-                else:
-                    should_split = True
-            else:
+        elif ends_comma:
+            if count >= rules.min_tolerance:
                 should_split = True
-        elif not is_last_token and tokens[i + 1].text.rstrip().endswith(",") and (count + 1 <= max_tolerance):
+        elif not is_last_token and any(tokens[i + 1].text.rstrip().endswith(p) for p in [",", ";", ":"]) and (count + 1 <= max_tolerance):
             # Lookahead comma absorption: If next word ends with a comma and count + 1 <= max_tolerance,
-            # DO NOT split early! Absorb the comma word into current group so it closes neatly on the comma.
+            # absorb the comma word into current group so it closes neatly on the comma.
+            should_split = False
+        elif count + words_until_clause <= max_tolerance and words_until_clause > 0:
+            # Clause-First Semantic Protection:
+            # If current group + remaining words to comma/period <= max_tolerance (<= 7 words),
+            # KEEP THE CLAUSE INTACT! Do NOT split prematurely mid-clause!
             should_split = False
         elif (
             count >= target_min
@@ -982,10 +987,12 @@ def heuristic_grouping(
                 # Check if next word begins a natural prepositional or relative phrase
                 next_word_clean = _clean_word(tokens[i + 1].text)
                 curr_word_clean = _clean_word(tok.text)
+                is_article = next_word_clean in {"the", "el", "la", "los", "las", "un", "una", "unos", "unas"}
                 if (
                     next_word_clean in PHRASE_STARTERS
+                    and not (is_article and count < target_max)
                     and curr_word_clean not in DANGLING_END_WORDS
-                    and words_until_bound >= target_min
+                    and words_until_clause >= rules.min_tolerance
                 ):
                     should_split = True
 
