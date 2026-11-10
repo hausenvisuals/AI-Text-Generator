@@ -725,6 +725,76 @@ class TestCaptionGenerator(unittest.TestCase):
         cove_found = any("Calusa Cove" in g.text for g in groups)
         self.assertTrue(cove_found, "Compound 'Calusa Cove' must not be split across groups")
 
+    def test_spanish_inverted_punctuation_opener(self):
+        """Verify Spanish inverted punctuation (¿, ¡) opens fresh groups without awkward splits."""
+        text = "Es un lugar para echar raíces. ¿Listo para vivir la experiencia? Agenda tu cita hoy mismo."
+        tokens = [
+            WordToken(text=w, start=i * 0.35, end=i * 0.35 + 0.30, index=i)
+            for i, w in enumerate(text.split())
+        ]
+        groups = heuristic_grouping(tokens, mode=GroupingMode.LONG)
+        valid, msg = validate_caption_groups(groups, tokens, mode=GroupingMode.LONG)
+        self.assertTrue(valid, f"Validation failed: {msg}")
+
+        # The question must start with ¿ and not be joined with the previous statement
+        question_group = next((g for g in groups if "¿Listo" in g.text), None)
+        self.assertIsNotNone(question_group, "Question group with '¿Listo' must exist")
+        self.assertTrue(question_group.text.startswith("¿Listo"), f"Question should start cleanly: {question_group.text}")
+        self.assertTrue(question_group.text.endswith("experiencia?"), f"Question should end cleanly: {question_group.text}")
+
+    def test_spanish_locuciones_and_postpositive_adjectives(self):
+        """Verify Spanish compound prepositions and postpositive adjectives stay grouped."""
+        text = (
+            "Y más allá del precioso vecindario, "
+            "la vela ofrece parques a orillas del río, "
+            "un centro histórico y lugares favoritos como The Lunch y todo el encanto "
+            "que hace tan especial a los pueblos pequeños de Florida."
+        )
+        tokens = [
+            WordToken(text=w, start=i * 0.35, end=i * 0.35 + 0.30, index=i)
+            for i, w in enumerate(text.split())
+        ]
+        groups = heuristic_grouping(tokens, mode=GroupingMode.LONG)
+        valid, msg = validate_caption_groups(groups, tokens, mode=GroupingMode.LONG)
+        self.assertTrue(valid, f"Validation failed: {msg}")
+
+        # Check locuciones preposicionales
+        mas_alla_del = any("más allá del" in g.text.lower() for g in groups)
+        self.assertTrue(mas_alla_del, "'más allá del' must be kept together as a locución preposicional")
+
+        orillas_del = any("a orillas del río" in g.text.lower() for g in groups)
+        self.assertTrue(orillas_del, "'a orillas del río' must be kept together")
+
+        pueblos_pequenos = any("pueblos pequeños" in g.text.lower() for g in groups)
+        self.assertTrue(pueblos_pequenos, "'pueblos pequeños' postpositive adjective must be protected")
+
+        # Zero dangling words
+        for g in groups:
+            clean_last = g.text.strip().rstrip(".,!?").split()[-1].lower()
+            self.assertNotIn(
+                clean_last,
+                {"del", "de", "al", "a", "los", "las", "el", "la", "y", "tan", "con"},
+                f"Group '{g.text}' ended with dangling word '{clean_last}'"
+            )
+            self.assertGreaterEqual(g.word_count, 2, f"Group '{g.text}' is a 1-word orphan")
+
+    def test_spanish_numeral_unit_lock(self):
+        """Verify numerals and units ('treinta minutos', 'dos horas') are strictly locked."""
+        text = "Llegamos en treinta minutos al centro y luego a dos horas de Miami."
+        tokens = [
+            WordToken(text=w, start=i * 0.35, end=i * 0.35 + 0.30, index=i)
+            for i, w in enumerate(text.split())
+        ]
+        groups = heuristic_grouping(tokens, mode=GroupingMode.LONG)
+        valid, msg = validate_caption_groups(groups, tokens, mode=GroupingMode.LONG)
+        self.assertTrue(valid, f"Validation failed: {msg}")
+
+        minutos_group = any("treinta minutos" in g.text for g in groups)
+        self.assertTrue(minutos_group, "'treinta minutos' must be locked together in the same group")
+
+        horas_group = any("dos horas" in g.text for g in groups)
+        self.assertTrue(horas_group, "'dos horas' must be locked together in the same group")
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

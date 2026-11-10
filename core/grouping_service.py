@@ -124,17 +124,50 @@ KNOWN_COMPOUNDS = [
     ("de", "comunidad"),
     ("a", "orillas"),
     ("orillas", "del"),
+    ("orillas", "de"),
     ("del", "río"),
     ("del", "rio"),
-    ("echar", "raíces"),
-    ("echar", "raices"),
-    ("toda", "la"),
-    ("la", "familia"),
-    ("totalmente", "nuevas"),
-    ("hoy", "mismo"),
-    ("sin", "embargo"),
     ("más", "allá"),
     ("mas", "alla"),
+    ("allá", "del"),
+    ("alla", "del"),
+    ("allá", "de"),
+    ("alla", "de"),
+    ("a", "través"),
+    ("a", "traves"),
+    ("través", "de"),
+    ("traves", "de"),
+    ("través", "del"),
+    ("traves", "del"),
+    ("alrededor", "de"),
+    ("alrededor", "del"),
+    ("cerca", "de"),
+    ("cerca", "del"),
+    ("lejos", "de"),
+    ("lejos", "del"),
+    ("a", "pesar"),
+    ("pesar", "de"),
+    ("en", "lugar"),
+    ("lugar", "de"),
+    ("gracias", "a"),
+    ("gracias", "al"),
+    ("frente", "a"),
+    ("frente", "al"),
+    ("junto", "a"),
+    ("junto", "al"),
+    ("está", "cambiando"),
+    ("esta", "cambiando"),
+    ("están", "prefiriendo"),
+    ("estan", "prefiriendo"),
+    ("echar", "raíces"),
+    ("echar", "raices"),
+    ("viviendas", "totalmente"),
+    ("totalmente", "nuevas"),
+    ("entretenimiento", "ideal"),
+    ("toda", "la"),
+    ("la", "familia"),
+    ("hoy", "mismo"),
+    ("sin", "embargo"),
     ("más", "que"),
     ("mas", "que"),
     ("más", "tranquilo"),
@@ -145,7 +178,30 @@ KNOWN_COMPOUNDS = [
     ("treinta", "minutos"),
     ("dos", "horas"),
     ("lo", "que"),
+    ("lo", "cual"),
+    ("the", "lunch"),
 ]
+
+# Cardinal numerals and unit words locked together to prevent line breaks (e.g. 'treinta minutos', 'dos horas')
+NUMERAL_WORDS = {
+    "un", "uno", "una", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve", "diez",
+    "once", "doce", "trece", "catorce", "quince", "dieciséis", "dieciseis", "veinte", "veinticinco",
+    "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa", "cien", "mil",
+    "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "twenty", "thirty",
+}
+
+UNIT_WORDS = {
+    "minuto", "minutos", "hora", "horas", "segundo", "segundos", "día", "dias", "días",
+    "semana", "semanas", "mes", "meses", "año", "ano", "años", "anos", "milla", "millas",
+    "kilómetro", "kilometro", "kilómetros", "kilometros", "dormitorio", "dormitorios",
+    "baño", "baños", "bano", "banos", "habitaciones", "persona", "personas", "dólar", "dolares", "dólares",
+    "minute", "minutes", "hour", "hours", "day", "days", "mile", "miles", "bedroom", "bedrooms",
+}
+
+
+def is_numeral_unit(w1: str, w2: str) -> bool:
+    """Checks if w1 is a numeral and w2 is a unit of measurement/time/quantity."""
+    return (w1 in NUMERAL_WORDS or w1.isdigit()) and (w2 in UNIT_WORDS)
 
 
 @dataclass
@@ -448,11 +504,13 @@ def group_single_word(tokens: List[WordToken]) -> List[CaptionGroup]:
 
 
 def _is_compound_boundary(tokens: List[WordToken], current_idx: int) -> bool:
-    """Checks if current_idx and current_idx + 1 form a known compound phrase."""
+    """Checks if current_idx and current_idx + 1 form a known compound phrase or numeral+unit."""
     if current_idx >= len(tokens) - 1:
         return False
     w1 = _clean_word(tokens[current_idx].text)
     w2 = _clean_word(tokens[current_idx + 1].text)
+    if is_numeral_unit(w1, w2):
+        return True
     for c1, c2 in KNOWN_COMPOUNDS:
         if w1 == c1 and w2 == c2:
             return True
@@ -465,7 +523,7 @@ def _get_compound_chain_length(tokens: List[WordToken], start_idx: int) -> int:
     while curr < len(tokens) - 1:
         w1 = _clean_word(tokens[curr].text)
         w2 = _clean_word(tokens[curr + 1].text)
-        if any(c1 == w1 and c2 == w2 for c1, c2 in KNOWN_COMPOUNDS):
+        if is_numeral_unit(w1, w2) or any(c1 == w1 and c2 == w2 for c1, c2 in KNOWN_COMPOUNDS):
             curr += 1
         else:
             break
@@ -476,13 +534,17 @@ def _split_sentence_boundaries_in_raw_indices(
     raw_groups_indices: List[List[int]],
     tokens: List[WordToken],
 ) -> List[List[int]]:
-    """Splits any raw group that crosses a sentence boundary (. ! ?) mid-phrase."""
+    """Splits any raw group that crosses a sentence boundary (. ! ?) or opens with inverted punctuation (¿, ¡)."""
     out: List[List[int]] = []
     for g in raw_groups_indices:
         current: List[int] = []
-        for idx in g:
-            current.append(idx)
+        for pos, idx in enumerate(g):
             tok = tokens[idx]
+            # If a token starts with ¿ or ¡ mid-group and preceding words >= 2, split before it!
+            if (tok.text.startswith("¿") or tok.text.startswith("¡")) and pos > 0 and len(current) >= 2:
+                out.append(list(current))
+                current = []
+            current.append(idx)
             if _ends_sentence(tok.text):
                 if idx != g[-1]:
                     out.append(list(current))
@@ -497,61 +559,61 @@ def _repair_compound_splits(
     tokens: List[WordToken],
     rules: ModeRules,
 ) -> List[List[int]]:
-    """Repairs any known compound word or compound chain split across adjacent groups."""
+    """Repairs any known compound word, numeral+unit, or compound chain split across adjacent groups."""
     groups = [list(g) for g in raw_groups_indices if g]
     for i in range(len(groups) - 1):
         if not groups[i] or not groups[i + 1]:
             continue
         w_last = _clean_word(tokens[groups[i][-1]].text)
         w_first = _clean_word(tokens[groups[i + 1][0]].text)
-        for c1, c2 in KNOWN_COMPOUNDS:
-            if w_last == c1 and w_first == c2:
-                # Compound split detected across groups[i] and groups[i+1]
-                # Option 2 Check first (Backward move):
-                # If c2 ends with a comma (e.g. "club,") and moving c2 backward keeps groups[i] <= max_tolerance
-                # and leaves groups[i+1] valid (or collapses it if empty), move c2 backward so group i ends cleanly!
-                c2_ends_comma = tokens[groups[i + 1][0]].text.rstrip().endswith(",")
-                can_move_c2_back = (
-                    len(groups[i]) + 1 <= rules.max_tolerance
-                    and (len(groups[i + 1]) - 1 >= rules.min_tolerance or len(groups[i + 1]) <= 1)
-                )
-                if c2_ends_comma and can_move_c2_back:
+        is_compound = is_numeral_unit(w_last, w_first) or any(w_last == c1 and w_first == c2 for c1, c2 in KNOWN_COMPOUNDS)
+        if is_compound:
+            # Compound split detected across groups[i] and groups[i+1]
+            # Option 2 Check first (Backward move):
+            # If c2 ends with a comma (e.g. "club,") and moving c2 backward keeps groups[i] <= max_tolerance
+            # and leaves groups[i+1] valid (or collapses it if empty), move c2 backward so group i ends cleanly!
+            c2_ends_comma = tokens[groups[i + 1][0]].text.rstrip().endswith(",")
+            can_move_c2_back = (
+                len(groups[i]) + 1 <= rules.max_tolerance
+                and (len(groups[i + 1]) - 1 >= rules.min_tolerance or len(groups[i + 1]) <= 1)
+            )
+            if c2_ends_comma and can_move_c2_back:
+                if len(groups[i + 1]) <= 1:
+                    groups[i].extend(groups[i + 1])
+                    groups[i + 1] = []
+                else:
+                    borrowed = groups[i + 1].pop(0)
+                    groups[i].append(borrowed)
+                break
+
+            # Option 1: Move c1 (and any preceding words in the same compound chain / preposition / article) forward to groups[i+1]
+            chain_prefix = [groups[i].pop()]
+            while groups[i]:
+                prev_w = _clean_word(tokens[groups[i][-1]].text)
+                curr_head = _clean_word(tokens[chain_prefix[0]].text)
+                if is_numeral_unit(prev_w, curr_head) or any(cp1 == prev_w and cp2 == curr_head for cp1, cp2 in KNOWN_COMPOUNDS):
+                    chain_prefix.insert(0, groups[i].pop())
+                else:
+                    break
+            while groups[i] and _clean_word(tokens[groups[i][-1]].text) in DANGLING_END_WORDS:
+                if len(groups[i]) - 1 >= rules.min_tolerance:
+                    chain_prefix.insert(0, groups[i].pop())
+                else:
+                    break
+
+            if len(groups[i]) >= rules.min_tolerance and len(groups[i + 1]) + len(chain_prefix) <= rules.max_tolerance:
+                groups[i + 1] = chain_prefix + groups[i + 1]
+            else:
+                # Put back prefix into groups[i] and try Option 2: Move c2 backward to groups[i]
+                groups[i].extend(chain_prefix)
+                if len(groups[i]) + 1 <= rules.max_tolerance and (len(groups[i + 1]) - 1 >= rules.min_tolerance or len(groups[i + 1]) <= 1):
                     if len(groups[i + 1]) <= 1:
                         groups[i].extend(groups[i + 1])
                         groups[i + 1] = []
                     else:
                         borrowed = groups[i + 1].pop(0)
                         groups[i].append(borrowed)
-                    break
-
-                # Option 1: Move c1 (and any preceding words in the same compound chain / preposition / article) forward to groups[i+1]
-                chain_prefix = [groups[i].pop()]
-                while groups[i]:
-                    prev_w = _clean_word(tokens[groups[i][-1]].text)
-                    curr_head = _clean_word(tokens[chain_prefix[0]].text)
-                    if any(cp1 == prev_w and cp2 == curr_head for cp1, cp2 in KNOWN_COMPOUNDS):
-                        chain_prefix.insert(0, groups[i].pop())
-                    else:
-                        break
-                while groups[i] and _clean_word(tokens[groups[i][-1]].text) in DANGLING_END_WORDS:
-                    if len(groups[i]) - 1 >= rules.min_tolerance:
-                        chain_prefix.insert(0, groups[i].pop())
-                    else:
-                        break
-
-                if len(groups[i]) >= rules.min_tolerance and len(groups[i + 1]) + len(chain_prefix) <= rules.max_tolerance:
-                    groups[i + 1] = chain_prefix + groups[i + 1]
-                else:
-                    # Put back prefix into groups[i] and try Option 2: Move c2 backward to groups[i]
-                    groups[i].extend(chain_prefix)
-                    if len(groups[i]) + 1 <= rules.max_tolerance and (len(groups[i + 1]) - 1 >= rules.min_tolerance or len(groups[i + 1]) <= 1):
-                        if len(groups[i + 1]) <= 1:
-                            groups[i].extend(groups[i + 1])
-                            groups[i + 1] = []
-                        else:
-                            borrowed = groups[i + 1].pop(0)
-                            groups[i].append(borrowed)
-                break
+            break
     return [g for g in groups if g]
 
 
@@ -865,6 +927,9 @@ def heuristic_grouping(
     for k in range(len(tokens) - 1):
         w1 = _clean_word(tokens[k].text)
         w2 = _clean_word(tokens[k + 1].text)
+        if is_numeral_unit(w1, w2):
+            compound_split_forbidden.add(k)
+            continue
         for c1, c2 in KNOWN_COMPOUNDS:
             if w1 == c1 and w2 == c2:
                 compound_split_forbidden.add(k)
@@ -874,6 +939,12 @@ def heuristic_grouping(
     current_indices: List[int] = []
 
     for i, tok in enumerate(tokens):
+        # Inverted punctuation rule: ¿ or ¡ opens a fresh group if current has enough words
+        starts_inverted = tok.text.startswith("¿") or tok.text.startswith("¡")
+        if starts_inverted and current_indices and len(current_indices) >= rules.min_tolerance:
+            raw_groups.append(list(current_indices))
+            current_indices = []
+
         current_indices.append(i)
         count = len(current_indices)
 
@@ -910,6 +981,7 @@ def heuristic_grouping(
                 break
 
         should_split = False
+        clause_protected = False
 
         # Protect known compound words: NEVER split in the middle of a compound
         if i in compound_split_forbidden:
@@ -930,6 +1002,7 @@ def heuristic_grouping(
             # If current group + remaining words to comma/period <= max_tolerance (<= 7 words),
             # KEEP THE CLAUSE INTACT! Do NOT split prematurely mid-clause!
             should_split = False
+            clause_protected = True
         elif (
             count >= target_min
             and getattr(tok, "emphasis_score", 0.0) >= 1.1
@@ -945,8 +1018,9 @@ def heuristic_grouping(
         ):
             # Secondary Acoustic Rule: Anchor protection (do not cut immediately before a strong anchor word)
             should_split = False
+
         next_chain_len = _get_compound_chain_length(tokens, i + 1) if not is_last_token else 0
-        if not should_split:
+        if not should_split and not clause_protected and i not in compound_split_forbidden:
             if (
                 not is_last_token
                 and next_chain_len > 1
@@ -995,6 +1069,9 @@ def heuristic_grouping(
                     and words_until_clause >= rules.min_tolerance
                 ):
                     should_split = True
+        elif not should_split and clause_protected and i not in compound_split_forbidden:
+            if count >= max_tolerance:
+                should_split = True
 
         if should_split and current_indices:
             raw_groups.append(list(current_indices))
